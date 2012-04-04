@@ -1,0 +1,49 @@
+
+import os
+
+import pygame
+from pygame.locals import *
+
+def load_image(name, colorkey=None):
+    path = os.path.join("data", "images", name) + ".bmp"
+
+    image = pygame.image.load(path).convert()
+    if colorkey:
+        image.set_colorkey(colorkey)
+
+class TileSheet(object):
+    _map = {
+        ".": None,
+        ";": (3,3),
+        "#": (13,3),
+        "&": (7,8),
+        "*": (6,8),
+        "^": (6,7),
+    }
+        
+    def __init__(self, name, colorkey=None):
+        pass
+
+def main():
+    pygame.init()
+    screen = pygame.display.set_mode((640,480))
+
+    done = False
+    clock = pygame.time.Clock()
+    while not done:
+
+        for event in pygame.event.get():
+            if event.type == QUIT:
+                done = True
+            elif event.type == KEYUP and event.key == K_ESCAPE:
+                done = True
+
+
+
+        pygame.display.flip()
+        clock.tick(30)
+        
+if __name__ == "__main__":
+    main()
+    print "Byebye"
+

@@ -3,6 +3,7 @@ import os
 
 import pygame
 from pygame.locals import *
+from pygame.sprite import Sprite
 
 def load_image(name, colorkey=None):
     path = os.path.join("data", "images", name) + ".bmp"
@@ -11,6 +12,8 @@ def load_image(name, colorkey=None):
     if colorkey:
         image.set_colorkey(colorkey)
     return image
+
+    
 
 class TileSheet(object):
     _map = {
@@ -45,8 +48,35 @@ class TileSheet(object):
                 tile = self.tilemap.get(cell)
                 if tile:
                     surf.blit(tile, (x*self.w, y*self.h))
-
         return surf
+
+class PlayerTiles(TileSheet):
+    _map = {
+        "face_left" : (0,1),
+        "face_right" : (0,2)}
+
+    def __init__(self, image, size):
+        self.image = image
+        self.w,self.h = size
+
+        
+        self.tilemap = {}
+        for tile,coord in self._map.items():
+            if coord:
+                x,y = coord
+                self.tilemap[tile] = image.subsurface(x*self.w, y*self.h, self.w, self.h)
+
+    def get(self, image):
+        return self.tilemap.get(image)
+    
+
+class Player(Sprite):
+    def __init__(self, tilesheet):
+        Sprite.__init__(self)
+        self.tilesheet = tilesheet
+        self.image = self.tilesheet.get("face_left")
+        self.rect = self.image.get_rect()
+
 
 class Level(object):
     def __init__(self, name, tilesheet):
@@ -56,16 +86,21 @@ class Level(object):
         f.close()
 
         self.image = tilesheet.render(data)
+        
 
 def main():
     pygame.init()
     screen = pygame.display.set_mode((200,200))
     pygame.key.set_repeat(50,50)
     
-
     img_tiles = load_image("zelda2nestiles", (0,200,255))
     tilesheet = TileSheet(img_tiles, (16, 16))
+    
+    player_tiles = load_image("images", (255,255,255))
+    player_tilesheet = PlayerTiles(player_tiles, (30, 38))
+
     level = Level("level1", tilesheet)
+    player = Player(player_tilesheet)
     off_x, off_y = 0,0
     bound_x = level.image.get_width() - screen.get_width()
     bound_y = level.image.get_height() - screen.get_height()
@@ -101,12 +136,13 @@ def main():
 
         screen.fill((80,80,80))
         screen.blit(level.image, (off_x,off_y))
-
+        screen.blit(player.image, player.rect)
 
         pygame.display.flip()
         clock.tick(30)
         
 if __name__ == "__main__":
     main()
+    pygame.quit()
     print "Byebye"
 

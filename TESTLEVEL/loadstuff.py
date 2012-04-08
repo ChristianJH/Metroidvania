@@ -7,7 +7,10 @@ from pygame.sprite import Sprite
 
 scale = 2
 
+FPS = 1000
+
 SCREEN = 256*scale,224*scale
+
 
 def load_image(name, colorkey=None):
     path = os.path.join("data", "images", name) + ".bmp"
@@ -38,7 +41,7 @@ class TileSheet(object):
             if coord:
                 x,y = coord
                 self.tilemap[tile] = image.subsurface(x*self.w, y*self.h, self.w, self.h)
-
+    
     def render(self, data):
 
         rows = len(data)
@@ -52,7 +55,7 @@ class TileSheet(object):
                 if tile:
                     surf.blit(tile, (x*self.w, y*self.h))
         return surf
-
+    
 class PlayerTiles(TileSheet):
     _map = {
         "face_left" : (0,1),
@@ -126,29 +129,87 @@ def main():
     
     bound_x = level.image.get_width()
         
-        
+    xstartspeed = 2
+    xspeed = 0
+    xaccelrate = .25
+    daccelrate = .2
+    xmaxspeed = 4  
+    slowing = False
+    moving = False    
+
+    jumping = False
+    gravityaccel = .5
+    startjumpspeed = 10
+    jumpspeed = 10   
         
     bound_y = level.image.get_height()
         
     done = False
     clock = pygame.time.Clock()
     while not done:
-
+        
+    
         for event in pygame.event.get():
             if event.type == QUIT:
                 done = True
-            elif event.type == KEYUP and event.key == K_ESCAPE:
+            if event.type == KEYUP and event.key == K_ESCAPE:
                 done = True
-            elif event.type == KEYDOWN and event.key == K_LEFT:
-                off_x += 5
+            if event.type == KEYDOWN and event.key == K_LEFT:
+                slowing = False
+                moving = True
+                if xspeed == 0:
+                    xspeed = xstartspeed
+                off_x += xspeed
+                if xspeed < xmaxspeed:
+                    xspeed += xaccelrate
                 facing = "left"
-            elif event.type == KEYDOWN and event.key == K_RIGHT:
-                off_x -= 5
+            if event.type == KEYDOWN and event.key == K_RIGHT:
+                slowing = False
+                moving = True
+                off_x -= xspeed
+                if xspeed < xmaxspeed:
+                    xspeed += xaccelrate
                 facing = "right"
-            elif event.type == KEYDOWN and event.key == K_UP:
-                off_y += 5
-            elif event.type == KEYDOWN and event.key == K_DOWN:
+            if event.type == KEYDOWN and event.key == K_SPACE and jumping == False:
+                jumping = True
+                startheight = off_y
+            if event.type == KEYUP and event.key == K_LEFT and facing == "left":
+                slowing = True
+                moving = False
+            if event.type == KEYUP and event.key == K_RIGHT and facing == "right":
+                slowing = True
+                moving = False
+            if event.type == KEYDOWN and event.key == K_DOWN:
                 off_y -= 5
+
+        if moving == True:
+            if xspeed < xmaxspeed:
+                xspeed += xaccelrate
+            if facing == "left":
+                off_x += xspeed
+            elif facing == "right":
+                off_x -= xspeed
+
+        if slowing == True:
+            if xspeed > 0:
+                xspeed -= daccelrate
+                if facing == "left":
+                    off_x += xspeed
+                elif facing == "right":
+                    off_x -= xspeed
+            elif xspeed < 0:
+                xspeed = 0
+                slowing = False
+
+        if jumping == True:
+            off_y += jumpspeed
+            jumpspeed -= gravityaccel
+            if off_y <= startheight:
+                off_y = startheight
+                jumpspeed = startjumpspeed
+                jumping = False 
+            print jumpspeed
+
         
         if off_x > player_left:
             off_x = player_left
@@ -167,16 +228,18 @@ def main():
         print off_x, off_y, bound_x
     
         """
-        print off_x
-                
+        #print off_x
+        print xspeed        
+        
         screen.fill((80,80,80))
         screen.blit(level.image, (off_x,off_y))
         player = Player(player_tilesheet, facing)
                
         screen.blit(player.image, player.rect)
 
+        
         pygame.display.flip()
-        clock.tick(30)
+        clock.tick(FPS)
         
 if __name__ == "__main__":
     main()

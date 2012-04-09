@@ -7,7 +7,7 @@ from pygame.sprite import Sprite
 
 scale = 2
 
-FPS = 100
+FPS = 1000
 
 SCREEN = 256*scale,224*scale
 
@@ -21,6 +21,7 @@ def load_image(name, colorkey=None):
     return image
 
 
+
 class TileSheet(object):
     _map = {
         ".": None,
@@ -31,16 +32,20 @@ class TileSheet(object):
         "^": (5,6),
     }
         
-    def __init__(self, image, size):
+    def __init__(self, image, size, off_x, off_y):
         self.image = image
         self.w,self.h = size
+        self.off_x,self.off_y = off_x, off_y
 
+        self.OrangeBlocks = pygame.sprite.Group()
 
         self.tilemap = {}
         for tile,coord in self._map.items():
             if coord:
                 x,y = coord
                 self.tilemap[tile] = image.subsurface(x*self.w, y*self.h, self.w, self.h)
+            
+
     
     def render(self, data):
 
@@ -49,19 +54,51 @@ class TileSheet(object):
 
         surf = pygame.Surface((cols * self.w, rows *self.h))
 
+
+
         for y, row in enumerate(data):
             for x, cell in enumerate(row):
                 tile = self.tilemap.get(cell)
+                key = self.tilemap.get(x)
                 if tile:
                     surf.blit(tile, (x*self.w, y*self.h))
+                    if cell == ";":
+                        cell = Block(x*self.w,y*self.h, 3, self.w, self.h)
+                        self.OrangeBlocks.add(cell)
+                    else:
+                        pass
+
+        for sprite in self.OrangeBlocks:
+            print sprite.rect
         return surf
     
+class Block(Sprite):
+    def __init__(self, off_x, off_y, type, width, height):
+        Sprite.__init__(self)
+        self.width = width
+        self.height = height
+        self.color = (255,255,255)
+        self.rect = pygame.Rect(off_x,off_y,self.width,self.height)
+        self.image = pygame.Surface(self.rect.size)
+        self.image.fill(self.color)
+        self.type = type
+    #def collide(self):
+        
+       
+class SolidBlock(Block):
+    def __init__(self):
+        Block.__init__(self)
+    def collide(self):
+        print "PRINTT"
+
+    
+
 class PlayerTiles(TileSheet):
     _map = {
         "face_left" : (0,1),
         "face_right" : (0,2)}
 
-    def __init__(self, image, size):
+    def __init__(self, image, size, off_x, off_y):
         self.image = image
         self.w,self.h = size
 
@@ -102,13 +139,14 @@ def main():
     pygame.init()
     screen = pygame.display.set_mode(SCREEN)
     pygame.key.set_repeat(50,50)
+    off_x, off_y = 10,0
     facing = "right"
     player_width,player_height = 30,38
     img_tiles = load_image("zelda2nestiles", (0,200,255))
-    tilesheet = TileSheet(img_tiles, (16, 16))
-    
+    tilesheet = TileSheet(img_tiles, (16, 16), off_x, off_y)
+
     player_tiles = load_image("images", (255,255,255))
-    player_tilesheet = PlayerTiles(player_tiles, (player_width, player_height))
+    player_tilesheet = PlayerTiles(player_tiles, (player_width, player_height), off_x, off_y)
 
     level = Level("level1", tilesheet)
     player = Player(player_tilesheet,facing)
@@ -116,8 +154,7 @@ def main():
     player_left = (screen.get_width()-player_width)/2
     player_top = (screen.get_height()*.66-player_height/2)
     player_bottom = (screen.get_height()*.66+player_height/2)
-    off_x, off_y = 0,0
-    
+
     
     
     # off_x, off_y = player.image.get_rect()  
@@ -129,7 +166,18 @@ def main():
     
     bound_x = level.image.get_width()
         
-        
+    xstartspeed = 2
+    xspeed = 0
+    xaccelrate = .25
+    daccelrate = .2
+    xmaxspeed = 4  
+    slowing = False
+    moving = False    
+
+    jumping = False
+    gravityaccel = .5
+    startjumpspeed = 10
+    jumpspeed = 10   
         
     bound_y = level.image.get_height()
         
@@ -137,28 +185,68 @@ def main():
     clock = pygame.time.Clock()
     while not done:
         
-        xspeed = 0
-        xstartspeed = 2
-        xaccelrate = .5
-        xmaxspeed = 10
-   
     
         for event in pygame.event.get():
             if event.type == QUIT:
                 done = True
-            elif event.type == KEYUP and event.key == K_ESCAPE:
+            if event.type == KEYUP and event.key == K_ESCAPE:
                 done = True
-            elif event.type == KEYDOWN and event.key == K_LEFT:
-            #    xspeed += xaccelrate
-            #    off_x += xspeed
+            if event.type == KEYDOWN and event.key == K_LEFT:
+                slowing = False
+                moving = True
+                if xspeed == 0:
+                    xspeed = xstartspeed
+                off_x += xspeed
+                if xspeed < xmaxspeed:
+                    xspeed += xaccelrate
                 facing = "left"
-            elif event.type == KEYDOWN and event.key == K_RIGHT:
+            if event.type == KEYDOWN and event.key == K_RIGHT:
+                slowing = False
+                moving = True
                 off_x -= xspeed
+                if xspeed < xmaxspeed:
+                    xspeed += xaccelrate
                 facing = "right"
-            elif event.type == KEYDOWN and event.key == K_UP:
-                off_y += 5
-            elif event.type == KEYDOWN and event.key == K_DOWN:
+            if event.type == KEYDOWN and event.key == K_SPACE and jumping == False:
+                jumping = True
+                startheight = off_y
+            if event.type == KEYUP and event.key == K_LEFT and facing == "left":
+                slowing = True
+                moving = False
+            if event.type == KEYUP and event.key == K_RIGHT and facing == "right":
+                slowing = True
+                moving = False
+            if event.type == KEYDOWN and event.key == K_DOWN:
                 off_y -= 5
+
+        if moving == True:
+            if xspeed < xmaxspeed:
+                xspeed += xaccelrate
+            if facing == "left":
+                off_x += xspeed
+            elif facing == "right":
+                off_x -= xspeed
+
+        if slowing == True:
+            if xspeed > 0:
+                xspeed -= daccelrate
+                if facing == "left":
+                    off_x += xspeed
+                elif facing == "right":
+                    off_x -= xspeed
+            elif xspeed < 0:
+                xspeed = 0
+                slowing = False
+
+        if jumping == True:
+            off_y += jumpspeed
+            jumpspeed -= gravityaccel
+            if off_y <= startheight:
+                off_y = startheight
+                jumpspeed = startjumpspeed
+                jumping = False 
+            #print jumpspeed
+
         
         if off_x > player_left:
             off_x = player_left
@@ -177,15 +265,37 @@ def main():
         print off_x, off_y, bound_x
     
         """
-        print off_x
-                
+        #print off_x
+        #print xspeed        
+        
         screen.fill((80,80,80))
         screen.blit(level.image, (off_x,off_y))
         player = Player(player_tilesheet, facing)
-               
-        screen.blit(player.image, player.rect)
-
+        blocks = Block(off_x, off_y, 1, 80, 80)
         
+
+
+
+        screen.blit(blocks.image, blocks.rect)      
+        screen.blit(player.image, player.rect)
+        playergroup = pygame.sprite.Group(player)
+        blockgroup = pygame.sprite.Group(blocks) 
+        
+        print tilesheet.OrangeBlocks.sprites()
+        #print player.rect
+        for i in range(2):
+            blockgroup.add(Block(off_x, off_y, i, 80, 80))
+        #Block(off_x, off_y, 1)
+        #print blockgroup
+
+        if pygame.sprite.groupcollide(playergroup, tilesheet.OrangeBlocks, False, False):
+            print "COLLIDES"
+        #else:
+            #print "NO"
+
+
+
+
         pygame.display.flip()
         clock.tick(FPS)
         

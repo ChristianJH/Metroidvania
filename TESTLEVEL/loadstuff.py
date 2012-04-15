@@ -4,13 +4,19 @@ import os
 import pygame
 from pygame.locals import *
 from pygame.sprite import Sprite
+from pygame import Rect, Surface
 
+import level
+from level import TileSheet, Level
+import block
+from block import Block, SolidBlock
 
-scale = 1
+scale = 3
 
 FPS = 1000
 
 SCREEN = 256*scale,224*scale
+
 
 def rel_rect(rect,parent):
     return Rect((rect.x-parent.x, rect.y-parent.y), rect.size)
@@ -36,7 +42,7 @@ class Camera(object):
     def draw_sprite(self, surf, sprite):
         if self.rect.colliderect(sprite.rect):
             surf.blit(sprite.image,rel_rect(sprite.rect, self.rect))
-
+"""
 class TileSheet(object):
     _map = {
         ".": None,
@@ -85,7 +91,9 @@ class TileSheet(object):
         for sprite in self.OrangeBlocks:
             print sprite.rect
         return surf
-    
+ """   
+
+"""
 class Block(Sprite):
     def __init__(self, off_x, off_y, type, width, height):
         Sprite.__init__(self)
@@ -103,8 +111,8 @@ class SolidBlock(Block):
     def __init__(self):
         Block.__init__(self)
     def collide(self):
-        print "PRINTT"
-
+        print "PRINT"
+"""
     
 
 class PlayerTiles(TileSheet):
@@ -137,8 +145,19 @@ class Player(Sprite):
         elif self.facing == "right":
             self.image = self.tilesheet.get("face_right")        
         self.rect = self.image.get_rect(center=(0+playerx,playery))
+        self.underfoot = Rect(playerx-self.rect[2]/2,playery+self.rect[3]/2,self.rect[2],1)
+        self.underfoot2 = Rect(playerx-self.rect[2]/2,playery+self.rect[3]/2,self.rect[2],2)      
+        #pygame.draw.rect(self.surf, (0,0,0), self.underfoot)
+        #self.right =
+        #self.up =
+        #self.down =
 
-
+    def stop(self,xspeed,playerx,facing):
+        if facing=="left":
+            print xspeed
+            xspeed -= 100
+            
+'''
 class Level(object):
     def __init__(self, name, tilesheet):
         path = os.path.join("data", "levels", name) + ".lvl"
@@ -149,7 +168,7 @@ class Level(object):
         self.image = tilesheet.render(data)
         
         self.bounds = Rect((0,0),(100,100))
-
+'''
 def main():
     pygame.init()
     screen = pygame.display.set_mode(SCREEN)
@@ -166,6 +185,8 @@ def main():
 
     level = Level("level1", tilesheet)
     player = Player(player_tilesheet,facing, off_x, off_y)
+
+
 
     camera = Camera(player, level.bounds, (40,40)) 
 
@@ -185,8 +206,8 @@ def main():
     
     bound_x = level.image.get_width()
     
-    playerx = 100
-    playery = 100   
+    playerx = 120
+    playery = 120   
 
     xstartspeed = 2
     xspeed = 0
@@ -196,10 +217,16 @@ def main():
     slowing = False
     moving = False    
 
+    horizcollide = False
+
     jumping = False
     gravityaccel = 0.5
-    startjumpspeed = 10
-    jumpspeed = 10   
+    startjumpspeed = 7
+    jumpspeed = 7  
+    yvelocity = 0
+    #fallspeed = 2 
+    gravity = True
+    lastvheight=0
         
     bound_y = level.image.get_height()
         
@@ -230,8 +257,10 @@ def main():
                     xspeed += xaccelrate
                 facing = "right"
             if event.type == KEYDOWN and event.key == K_SPACE and jumping == False:
+                jumpspeed = startjumpspeed
                 jumping = True
-                startheight = playery
+                print "Work work work"
+                playery -= 0
             if event.type == KEYUP and event.key == K_LEFT and facing == "left":
                 slowing = True
                 moving = False
@@ -241,33 +270,8 @@ def main():
             #if event.type == KEYDOWN and event.key == K_DOWN:
                 #playery += 5
 
-        if moving == True:
-            if xspeed < xmaxspeed:
-                xspeed += xaccelrate
-            if facing == "left":
-                playerx -= xspeed
-            elif facing == "right":
-                playerx += xspeed
+        #print jumping
 
-        if slowing == True:
-            if xspeed > 0:
-                xspeed -= daccelrate
-                if facing == "left":
-                    playerx -= xspeed
-                elif facing == "right":
-                    playerx += xspeed
-            elif xspeed < 0:
-                xspeed = 0
-                slowing = False
-
-        if jumping == True:
-            playery -= jumpspeed
-            jumpspeed -= gravityaccel
-            if playery >= startheight:
-                playery = startheight
-                jumpspeed = startjumpspeed
-                jumping = False 
-            #print jumpspeed
 
         
         #if off_x > player_left:
@@ -296,13 +300,15 @@ def main():
         blocks = Block(off_x, off_y, 1, 80, 80)
         
         #off_x,off_y=playerx,playery
-
+        playergroup = pygame.sprite.Group(player)
+        blockgroup = pygame.sprite.Group(blocks)
 
 
         screen.blit(blocks.image, blocks.rect)      
         screen.blit(player.image, player.rect)
-        playergroup = pygame.sprite.Group(player)
-        blockgroup = pygame.sprite.Group(blocks) 
+        #playergroup = pygame.sprite.Group(player)
+        #They are at the top
+        #blockgroup = pygame.sprite.Group(blocks) 
         
         #for sprite in tilesheet.OrangeBlocks:
             #print sprite.rect
@@ -312,13 +318,125 @@ def main():
         #Block(off_x, off_y, 1)
         #print blockgroup
 
+        """
         if pygame.sprite.groupcollide(playergroup, tilesheet.OrangeBlocks, False, False):
-            print "COLLIDES"
+            if True:
+                if not pygame.sprite.groupcollide(playergroup, tilesheet.OrangeBlocks, False, False):
+                    break
+                else: 
+                    print "Collide"
+                    playery -= 1
+        """
+        #if player.rect.clip(player.rect) > (0,0,0,0):
+            #print player.rect.clip(player.rect)
+        horizshift = 0
+        vertshift = 0
+        gravitycheck = 1
+        gravitycheck2 = 1
+
+        for block in tilesheet.OrangeBlocks:
+            if player.underfoot.clip(block):
+                gravitycheck *= 0
+                #print "yes"
+            else:
+                #print "no"
+                if player.underfoot2.clip(block) != 0 and playery % block.width != 0:
+                    gravitycheck *= 1
+            #if gravitycheck == 0:
+                #gravity = False
+            #else:
+                #gravity = True
+
+            if player.rect.clip(block):
+                if block.rect[1] + block.rect[3] == player.rect[1]:
+                    #print "HeadCrash"
+                    vertshift = player.rect.clip(block)[3]
+                    #yvelocity = 0
+                if player.rect.clip(block)[1]+player.rect.clip(block)[3] == player.rect[1]+player.rect[3]:
+                    #print "GroundCrash"
+                    #jumping = False
+                    #yvelocity = 0
+                    #vertshift = -player.rect.clip(block)[3]
+                    pass
+                if player.rect.clip(block)[0] == player.rect[0]:
+                    #print "LeftCrash"
+                    pass
+                if player.rect.clip(block)[0]+player.rect.clip(block)[2] == player.rect[0]+player.rect[2]:
+                    #print "RightCrash"
+                    pass
+        #print jumping
+
+        playery += vertshift
+
+        #else:
+        #    print "Not"
+
+        if moving == True:
+            if xspeed < xmaxspeed:
+                xspeed += xaccelrate
+            if facing == "left":
+                playerx -= xspeed
+            elif facing == "right":
+                playerx += xspeed
+        print gravitycheck
+        
+        if slowing == True:
+            if xspeed > 0:
+                xspeed -= daccelrate
+                if facing == "left":
+                    playerx -= xspeed
+                elif facing == "right":
+                    playerx += xspeed
+            elif xspeed < 0:
+                xspeed = 0
+                slowing = False
+
+        if gravitycheck == 0:
+            gravity = False
+            yvelocity = 0
+            #print playery+player_height/2
+            if playery+player_height/2 % block.width != 0:
+                #print block.width
+                if ((playery+player_height/2) % block.width) != 0:
+                    difference = ((playery+player_height/2) % block.width)
+                    print difference
+                    jumping = False
+                    playery -= difference
+                #playery-=.1
+            else:
+                print "Perfect?"
+                #playery = 12
         else:
-            print "NO"
+            gravity = True
+            print "Not grounded"
 
+        if gravity == True:
+            #futurey = playery + yvelocity
+            checkvalue = 0
+            for block in tilesheet.OrangeBlocks:
+                checkvalue += player.rect.clip(block)[3]
+            if not checkvalue > 0:
+                yvelocity += gravityaccel #Falling
+                playery += yvelocity
+                #print "to"
+            else:
+                playery -= yvelocity
+                #print "fro"
 
+        if jumping == True:
+            yvelocity += jumpspeed
+            jumpspeed -= gravityaccel
+            playery -= yvelocity
+        print yvelocity, jumpspeed, playery
+            
+            #if playery >= startheight:
+                #playery = startheight
+                #jumpspeed = startjumpspeed
+                #jumping = False
+        #print fallspeed 
 
+        #print gravity,"gravity"
+        #print yvelocity
 
         pygame.display.flip()
         clock.tick(FPS)

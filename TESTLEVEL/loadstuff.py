@@ -13,7 +13,7 @@ from block import Block, SolidBlock
 
 scale = 3
 
-FPS = 1000
+FPS = 5
 
 SCREEN = 256*scale,224*scale
 
@@ -146,6 +146,10 @@ class Player(Sprite):
             self.image = self.tilesheet.get("face_right")        
         self.rect = self.image.get_rect(center=(0+playerx,playery))
         self.underfoot = Rect(playerx-self.rect[2]/2,playery+self.rect[3]/2,self.rect[2],1)
+        self.overhead = Rect(playerx-self.rect[2]/2,playery-self.rect[3]/2-1,self.rect[2],1)
+        self.left = Rect(playerx-self.rect[2]/2-1,playery-self.rect[3]/2-1,1+self.rect[2]/2,self.rect[3])
+        self.right = Rect(playerx,playery-self.rect[3]/2-1,self.rect[2]/2+1,self.rect[3])
+
         self.underfoot2 = Rect(playerx-self.rect[2]/2,playery+self.rect[3]/2,self.rect[2],2)      
         #pygame.draw.rect(self.surf, (0,0,0), self.underfoot)
         #self.right =
@@ -332,7 +336,9 @@ def main():
         horizshift = 0
         vertshift = 0
         gravitycheck = 1
-        gravitycheck2 = 1
+        headcheck = 1
+        leftcheck = 1
+        rightcheck = 1
 
         for block in tilesheet.OrangeBlocks:
             if player.underfoot.clip(block):
@@ -346,14 +352,30 @@ def main():
                 #gravity = False
             #else:
                 #gravity = True
+            if player.overhead.clip(block):
+                headcheck *= 0
+                #print "yes"
+            else:
+                #print "no"
+                headcheck *= 1
+            if player.left.clip(block):
+                leftcheck *= 0
+            else:
+                leftcheck *= 1
+
+            if player.right.clip(block):
+                rightcheck *= 0
+            else:
+                rightcheck *= 1
 
             if player.rect.clip(block):
                 if block.rect[1] + block.rect[3] == player.rect[1]:
                     #print "HeadCrash"
                     vertshift = player.rect.clip(block)[3]
+                    #playery += vertshift
                     #yvelocity = 0
                 if player.rect.clip(block)[1]+player.rect.clip(block)[3] == player.rect[1]+player.rect[3]:
-                    #print "GroundCrash"
+                    print "GroundCrash"
                     #jumping = False
                     #yvelocity = 0
                     #vertshift = -player.rect.clip(block)[3]
@@ -366,7 +388,7 @@ def main():
                     pass
         #print jumping
 
-        playery += vertshift
+        #playery += vertshift
 
         #else:
         #    print "Not"
@@ -391,6 +413,8 @@ def main():
                 xspeed = 0
                 slowing = False
 
+
+
         if gravitycheck == 0:
             gravity = False
             yvelocity = 0
@@ -412,15 +436,15 @@ def main():
 
         if gravity == True:
             #futurey = playery + yvelocity
-            checkvalue = 0
-            for block in tilesheet.OrangeBlocks:
-                checkvalue += player.rect.clip(block)[3]
-            if not checkvalue > 0:
-                yvelocity += gravityaccel #Falling
-                playery += yvelocity
+            #checkvalue = 0
+            #for block in tilesheet.OrangeBlocks:
+                #checkvalue += player.rect.clip(block)[3]
+            #if checkvalue == 0:
+            yvelocity += gravityaccel #Falling
+            playery += yvelocity
                 #print "to"
-            else:
-                playery -= yvelocity
+            #else:
+                #playery -= yvelocity
                 #print "fro"
 
         if jumping == True:
@@ -434,12 +458,31 @@ def main():
                 #jumpspeed = startjumpspeed
                 #jumping = False
         #print fallspeed 
-
+        print playerx, "playerx"
         #print gravity,"gravity"
         #print yvelocity
 
-        pygame.display.flip()
+        if headcheck == 0 and (leftcheck == 0 or rightcheck == 0):
+            if ((playery-player_height/2) % block.height) != 0:
+                vdifference = ((playery-player_height/2) % block.height)
+                yvelocity = 0
+                jumpspeed = 0
+                print "vdifference", vdifference
+                playery += vdifference+1
+
+        if leftcheck == 0:
+            hdifference = ((playerx-player_width/2) % block.height)
+            xspeed = 0
+            playerx += hdifference
+            print "LEFTLEFTLEFT"
+
+        if rightcheck == 0:
+            xspeed = 0
+            hdifference = ((playerx+player_width/2) % block.height)
+            print "RIGHTRIGHTERRRRRRRRRRRR"
+            playerx -= hdifference
         clock.tick(FPS)
+        pygame.display.flip()
         
 if __name__ == "__main__":
     main()

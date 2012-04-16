@@ -145,8 +145,8 @@ class Player(Sprite):
         elif self.facing == "right":
             self.image = self.tilesheet.get("face_right")        
         self.rect = self.image.get_rect(center=(0+playerx,playery))
-        self.underfoot = Rect(playerx,playery+self.rect[1],self.rect[2],100)
-        
+        self.underfoot = Rect(playerx-self.rect[2]/2,playery+self.rect[3]/2,self.rect[2],1)
+        self.underfoot2 = Rect(playerx-self.rect[2]/2,playery+self.rect[3]/2,self.rect[2],2)      
         #pygame.draw.rect(self.surf, (0,0,0), self.underfoot)
         #self.right =
         #self.up =
@@ -206,7 +206,7 @@ def main():
     
     bound_x = level.image.get_width()
     
-    playerx = 100
+    playerx = 120
     playery = 120   
 
     xstartspeed = 2
@@ -257,8 +257,10 @@ def main():
                     xspeed += xaccelrate
                 facing = "right"
             if event.type == KEYDOWN and event.key == K_SPACE and jumping == False:
-                #jumpspeed = startjumpspeed
+                jumpspeed = startjumpspeed
                 jumping = True
+                print "Work work work"
+                playery -= 0
             if event.type == KEYUP and event.key == K_LEFT and facing == "left":
                 slowing = True
                 moving = False
@@ -268,7 +270,7 @@ def main():
             #if event.type == KEYDOWN and event.key == K_DOWN:
                 #playery += 5
 
-
+        #print jumping
 
 
         
@@ -329,22 +331,33 @@ def main():
             #print player.rect.clip(player.rect)
         horizshift = 0
         vertshift = 0
+        gravitycheck = 1
+        gravitycheck2 = 1
 
         for block in tilesheet.OrangeBlocks:
             if player.underfoot.clip(block):
-                if block.rect[3] == player.underfoot.clip(block)[3]:
-                    print "yes"
-                #else:
-                    #print "No"
+                gravitycheck *= 0
+                #print "yes"
+            else:
+                #print "no"
+                if player.underfoot2.clip(block) != 0 and playery % block.width != 0:
+                    gravitycheck *= 1
+            #if gravitycheck == 0:
+                #gravity = False
+            #else:
+                #gravity = True
+
             if player.rect.clip(block):
                 if block.rect[1] + block.rect[3] == player.rect[1]:
                     #print "HeadCrash"
                     vertshift = player.rect.clip(block)[3]
+                    #yvelocity = 0
                 if player.rect.clip(block)[1]+player.rect.clip(block)[3] == player.rect[1]+player.rect[3]:
                     #print "GroundCrash"
-                    jumping = False
-                    yvelocity = 0
-                    vertshift = -player.rect.clip(block)[3]
+                    #jumping = False
+                    #yvelocity = 0
+                    #vertshift = -player.rect.clip(block)[3]
+                    pass
                 if player.rect.clip(block)[0] == player.rect[0]:
                     #print "LeftCrash"
                     pass
@@ -365,7 +378,8 @@ def main():
                 playerx -= xspeed
             elif facing == "right":
                 playerx += xspeed
-
+        print gravitycheck
+        
         if slowing == True:
             if xspeed > 0:
                 xspeed -= daccelrate
@@ -377,13 +391,43 @@ def main():
                 xspeed = 0
                 slowing = False
 
+        if gravitycheck == 0:
+            gravity = False
+            yvelocity = 0
+            #print playery+player_height/2
+            if playery+player_height/2 % block.width != 0:
+                #print block.width
+                if ((playery+player_height/2) % block.width) != 0:
+                    difference = ((playery+player_height/2) % block.width)
+                    print difference
+                    jumping = False
+                    playery -= difference
+                #playery-=.1
+            else:
+                print "Perfect?"
+                #playery = 12
+        else:
+            gravity = True
+            print "Not grounded"
+
         if gravity == True:
-            playery += yvelocity
-            yvelocity += gravityaccel #Falling
+            #futurey = playery + yvelocity
+            checkvalue = 0
+            for block in tilesheet.OrangeBlocks:
+                checkvalue += player.rect.clip(block)[3]
+            if not checkvalue > 0:
+                yvelocity += gravityaccel #Falling
+                playery += yvelocity
+                #print "to"
+            else:
+                playery -= yvelocity
+                #print "fro"
 
         if jumping == True:
-            yvelocity -= jumpspeed
+            yvelocity += jumpspeed
             jumpspeed -= gravityaccel
+            playery -= yvelocity
+        print yvelocity, jumpspeed, playery
             
             #if playery >= startheight:
                 #playery = startheight

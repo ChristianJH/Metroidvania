@@ -11,7 +11,7 @@ from block import Block, SolidBlock
 class TileSheet(object):
     _map = {
         ".": None,
-        ";": (1,15),
+        ";": (1,1),
         "#": (12,2),
         "&": (6,1),
         "*": (5,7),
@@ -53,8 +53,8 @@ class TileSheet(object):
                     else:
                         pass
 
-        #for sprite in self.OrangeBlocks:
-            #print sprite.rect
+        for sprite in self.OrangeBlocks:
+            print sprite.rect
         return surf
     
 

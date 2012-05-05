@@ -53,8 +53,8 @@ class TileSheet(object):
                     else:
                         pass
 
-        #for sprite in self.OrangeBlocks:
-            #print sprite.rect
+        for sprite in self.OrangeBlocks:
+            print sprite.rect
         return surf
     
 

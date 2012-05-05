@@ -20,5 +20,4 @@ class SolidBlock(Block):
     def __init__(self):
         Block.__init__(self)
     def collide(self):
-        pass
-        #print "PRINT"
+        print "PRINT"

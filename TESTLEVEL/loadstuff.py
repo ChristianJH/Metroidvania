@@ -11,12 +11,13 @@ from level import TileSheet, Level
 import block
 from block import Block, SolidBlock
 
-scale = 3
+scale = 4
 
-FPS = 5
+FPS = 30
 
 SCREEN = 256*scale,224*scale
 
+print "The controls for this game are the arrow keys to move and the space bar to jump."
 
 def rel_rect(rect,parent):
     return Rect((rect.x-parent.x, rect.y-parent.y), rect.size)
@@ -117,8 +118,8 @@ class SolidBlock(Block):
 
 class PlayerTiles(TileSheet):
     _map = {
-        "face_left" : (0,1),
-        "face_right" : (0,2)}
+        "face_left" : (1,1),
+        "face_right" : (1,0)}
 
     def __init__(self, image, size, off_x, off_y):
         self.image = image
@@ -134,6 +135,85 @@ class PlayerTiles(TileSheet):
     def get(self, image):
         return self.tilemap.get(image)
     
+class GoalTiles(TileSheet):
+    _map = {
+        "normal" : (0,0)}
+
+    def __init__(self, image, size, off_x, off_y):
+        self.image = image
+        self.w,self.h = size
+
+        self.tilemap = {}
+        for tile,coord in self._map.items():
+            if coord:
+                x,y = coord
+                self.tilemap[tile] = image.subsurface(x*self.w,y*self.h, self.w, self.h)
+
+    def get(self, image):
+        return self.tilemap.get(image)
+
+class CreepTiles(TileSheet):
+    _map = {
+        "face_left" : (0,0),
+        "face_right" : (2,0)}
+
+    def __init__(self, image, size):
+        self.image = image
+        self.w,self.h = size
+
+        
+        self.tilemap = {}
+        for tile,coord in self._map.items():
+            if coord:
+                x,y = coord
+                self.tilemap[tile] = image.subsurface(x*self.w, y*self.h, self.w, self.h)
+
+    def get(self, image):
+        return self.tilemap.get(image)
+
+class Creep(Sprite):
+    def __init__(self, tilesheet, creepx, creepy, speed, facing):
+        Sprite.__init__(self)
+        self.tilesheet = tilesheet
+        self.x, self.y = creepx, creepy
+        self.facing = facing
+        #self.facing = "left"
+        self.speed = speed
+        self.move = 0
+        if facing == "left":
+            self.image = self.tilesheet.get("face_left")
+        else:
+            self.image = self.tilesheet.get("face_right")
+            
+        self.rect = self.image.get_rect(topleft=(self.x,self.y))
+        
+        
+    def update(self, collide):
+        if not collide:
+            if self.facing == "right":
+                self.move = self.speed
+            if self.facing == "left":
+                self.move = -self.speed
+        else:
+            if self.facing == "right":
+                self.facing = "left"
+                self.move -= 10
+            elif self.facing == "left":
+                self.facing = "right"
+                self.move += 10
+        self.rect = self.rect.move(self.move,0)
+        self.move = 0
+        if self.facing == "left":
+            self.image = self.tilesheet.get("face_left")
+        elif self.facing == "right":
+            self.image = self.tilesheet.get("face_right")
+
+class Goal(Sprite):
+    def __init__(self, tilesheet, goalx, goaly):
+        Sprite.__init__(self)
+        self.tilesheet = tilesheet
+        self.image = self.tilesheet.get("normal")
+        self.rect = self.image.get_rect(topleft=(0+goalx,goaly))
 
 class Player(Sprite):
     def __init__(self, tilesheet, facing,playerx,playery):
@@ -158,7 +238,7 @@ class Player(Sprite):
 
     def stop(self,xspeed,playerx,facing):
         if facing=="left":
-            print xspeed
+            #print xspeed
             xspeed -= 100
             
 '''
@@ -177,19 +257,43 @@ def main():
     pygame.init()
     screen = pygame.display.set_mode(SCREEN)
     pygame.key.set_repeat(50,50)
+
+    restart = True
+    win = False
+
     off_x, off_y = 0,0
+    
     facing = "right"
-    player_width,player_height = 30,38
-    img_tiles = load_image("zelda2nestiles", (0,200,255))
-    tilesheet = TileSheet(img_tiles, (16, 16), off_x, off_y)
+    playerx = 120
+    playery = 100 
+    
+    player_width,player_height = 10,20
+    img_tiles = load_image("fullsheet", (0,248,0))
+    tilesheet = TileSheet(img_tiles, (10, 10), off_x, off_y)
 
 
-    player_tiles = load_image("images", (255,255,255))
+    player_tiles = load_image("guysheet", (0,248,0))
     player_tilesheet = PlayerTiles(player_tiles, (player_width, player_height), off_x, off_y)
+
+    creep_tiles = load_image("enemysheet", (0,248,0))
+    creep_tilesheet = CreepTiles(creep_tiles, (20, 20))
+
+    goal_tiles = load_image("goalsheet", (0,248,0))
+    goal_tilesheet = GoalTiles(goal_tiles, (20,30), off_x, off_y)
 
     level = Level("level1", tilesheet)
     player = Player(player_tilesheet,facing, off_x, off_y)
 
+    enemy = Creep(creep_tilesheet, 450,150, 2, "left")
+    enemy2 = Creep(creep_tilesheet, 500,150, 2, "right")
+    enemy3 = Creep(creep_tilesheet, 465,350, 2, "right")
+    enemy4 = Creep(creep_tilesheet, 465,530, 1, "right")
+    enemy5 = Creep(creep_tilesheet, 465,190, 1, "left")
+    enemy6 = Creep(creep_tilesheet, 465,750, 3, "right")
+    enemy7 = Creep(creep_tilesheet, 400,750, 3, "left")
+    enemy8 = Creep(creep_tilesheet, 250,750, 3, "right")
+    enemy9 = Creep(creep_tilesheet, 400,850, 2, "right")
+    enemy10 = Creep(creep_tilesheet, 300,850, 2, "left")
 
 
     camera = Camera(player, level.bounds, (40,40)) 
@@ -210,8 +314,8 @@ def main():
     
     bound_x = level.image.get_width()
     
-    playerx = 120
-    playery = 120   
+    #playerx = 120
+    #playery = 100   
 
     xstartspeed = 2
     xspeed = 0
@@ -238,7 +342,8 @@ def main():
     clock = pygame.time.Clock()
     while not done:
         
-    
+
+
         for event in pygame.event.get():
             if event.type == QUIT:
                 done = True
@@ -263,7 +368,7 @@ def main():
             if event.type == KEYDOWN and event.key == K_SPACE and jumping == False:
                 jumpspeed = startjumpspeed
                 jumping = True
-                print "Work work work"
+                #print "Work work work"
                 playery -= 0
             if event.type == KEYUP and event.key == K_LEFT and facing == "left":
                 slowing = True
@@ -302,14 +407,30 @@ def main():
         screen.blit(level.image, (off_x,off_y))
         player = Player(player_tilesheet, facing, playerx, playery)
         blocks = Block(off_x, off_y, 1, 80, 80)
+        goal = Goal(goal_tilesheet, 900,810)
         
         #off_x,off_y=playerx,playery
         playergroup = pygame.sprite.Group(player)
         blockgroup = pygame.sprite.Group(blocks)
+        goalgroup = pygame.sprite.Group(goal)
+        enemygroup = pygame.sprite.Group(enemy,enemy2,enemy3,enemy4,enemy5,enemy6,enemy7,enemy8,enemy9,enemy10)
 
+        enemy1_wall_hit = pygame.sprite.spritecollideany(enemy, tilesheet.OrangeBlocks)
+        enemy2_wall_hit = pygame.sprite.spritecollideany(enemy2, tilesheet.OrangeBlocks)
+        enemy3_wall_hit = pygame.sprite.spritecollideany(enemy3, tilesheet.OrangeBlocks)
+        enemy4_wall_hit = pygame.sprite.spritecollideany(enemy4, tilesheet.OrangeBlocks)
+        enemy5_wall_hit = pygame.sprite.spritecollideany(enemy5, tilesheet.OrangeBlocks)
+        enemy6_wall_hit = pygame.sprite.spritecollideany(enemy6, tilesheet.OrangeBlocks)
+        enemy7_wall_hit = pygame.sprite.spritecollideany(enemy7, tilesheet.OrangeBlocks)
+        enemy8_wall_hit = pygame.sprite.spritecollideany(enemy8, tilesheet.OrangeBlocks)
+        enemy9_wall_hit = pygame.sprite.spritecollideany(enemy9, tilesheet.OrangeBlocks)
+        enemy10_wall_hit = pygame.sprite.spritecollideany(enemy10, tilesheet.OrangeBlocks)
 
+        """
         screen.blit(blocks.image, blocks.rect)      
         screen.blit(player.image, player.rect)
+        screen.blit(goal.image, goal.rect)
+        """
         #playergroup = pygame.sprite.Group(player)
         #They are at the top
         #blockgroup = pygame.sprite.Group(blocks) 
@@ -339,6 +460,18 @@ def main():
         headcheck = 1
         leftcheck = 1
         rightcheck = 1
+
+        if player.rect.clip(goal)[2] == 10:
+            #print "WINNNNNNNNNNNNN!"
+            done = True
+            win = True
+            print "Good Job!"
+        for enemy in enemygroup:
+            if player.rect.clip(enemy)[2] == 10:
+                #print "NOOOOOO!"
+                print "You have died."
+                done = True
+                restart = True
 
         for block in tilesheet.OrangeBlocks:
             if player.underfoot.clip(block):
@@ -375,7 +508,7 @@ def main():
                     #playery += vertshift
                     #yvelocity = 0
                 if player.rect.clip(block)[1]+player.rect.clip(block)[3] == player.rect[1]+player.rect[3]:
-                    print "GroundCrash"
+                    #print "GroundCrash"
                     #jumping = False
                     #yvelocity = 0
                     #vertshift = -player.rect.clip(block)[3]
@@ -400,7 +533,7 @@ def main():
                 playerx -= xspeed
             elif facing == "right":
                 playerx += xspeed
-        print gravitycheck
+        #print gravitycheck
         
         if slowing == True:
             if xspeed > 0:
@@ -423,16 +556,16 @@ def main():
                 #print block.width
                 if ((playery+player_height/2) % block.width) != 0:
                     difference = ((playery+player_height/2) % block.width)
-                    print difference
+                    #print difference
                     jumping = False
                     playery -= difference
                 #playery-=.1
-            else:
-                print "Perfect?"
+            #else:
+                #print "Perfect?"
                 #playery = 12
         else:
             gravity = True
-            print "Not grounded"
+            #print "Not grounded"
 
         if gravity == True:
             #futurey = playery + yvelocity
@@ -451,14 +584,14 @@ def main():
             yvelocity += jumpspeed
             jumpspeed -= gravityaccel
             playery -= yvelocity
-        print yvelocity, jumpspeed, playery
+        #print yvelocity, jumpspeed, playery
             
             #if playery >= startheight:
                 #playery = startheight
                 #jumpspeed = startjumpspeed
                 #jumping = False
         #print fallspeed 
-        print playerx, "playerx"
+        #print playerx, "playerx"
         #print gravity,"gravity"
         #print yvelocity
 
@@ -467,25 +600,63 @@ def main():
                 vdifference = ((playery-player_height/2) % block.height)
                 yvelocity = 0
                 jumpspeed = 0
-                print "vdifference", vdifference
+                #print "vdifference", vdifference
                 playery += vdifference+1
 
         if leftcheck == 0:
             hdifference = ((playerx-player_width/2) % block.height)
             xspeed = 0
             playerx += hdifference
-            print "LEFTLEFTLEFT"
+            #print "LEFTLEFTLEFT"
 
         if rightcheck == 0:
             xspeed = 0
             hdifference = ((playerx+player_width/2) % block.height)
-            print "RIGHTRIGHTERRRRRRRRRRRR"
+            #print "RIGHTRIGHTERRRRRRRRRRRR"
             playerx -= hdifference
+
+        #screen.blit(blocks.image, blocks.rect)      
+        #screen.blit(player.image, player.rect)
+        screen.blit(goal.image, goal.rect)
+        
+
+        screen.blit(enemy.image, enemy.rect)
+        screen.blit(enemy2.image, enemy2.rect)
+        screen.blit(enemy3.image, enemy3.rect)
+        screen.blit(enemy4.image, enemy4.rect)
+        screen.blit(enemy5.image, enemy5.rect)
+        screen.blit(enemy6.image, enemy6.rect)
+        screen.blit(enemy7.image, enemy7.rect)
+        screen.blit(enemy8.image, enemy8.rect)
+        screen.blit(enemy9.image, enemy9.rect)
+        screen.blit(enemy10.image, enemy10.rect)
+
+
+        enemy.update(enemy1_wall_hit)
+        enemy2.update(enemy2_wall_hit)
+        enemy3.update(enemy3_wall_hit)
+        enemy4.update(enemy4_wall_hit)
+        enemy5.update(enemy5_wall_hit)
+        enemy6.update(enemy6_wall_hit)
+        enemy7.update(enemy7_wall_hit)
+        enemy8.update(enemy8_wall_hit)
+        enemy9.update(enemy9_wall_hit)
+        enemy10.update(enemy10_wall_hit)
+        screen.blit(player.image, player.rect)
+
         clock.tick(FPS)
         pygame.display.flip()
-        
+
+        if restart == True:
+            facing = "right"
+            playerx = 120
+            playery = 100
+            restart = False
+            done = False
+            
+
 if __name__ == "__main__":
     main()
     pygame.quit()
-    print "Byebye"
+    print "Byebye!"
 
